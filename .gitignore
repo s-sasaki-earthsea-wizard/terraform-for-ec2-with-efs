@@ -4,3 +4,34 @@
 # .vscode
 .vscode
 
+# Local .terraform directories
+**/.terraform/*
+.terraform.lock.hcl
+
+# .tfstate files
+*.tfstate
+*.tfstate.*.backup
+
+# Variables files
+*.tfvars
+*.tfstate
+*.tfstate.backup
+
+*.auto.tfvars
+# this is only for example and should not be checked in to source control
+!terraform.tfvars.example 
+
+# tfplan files
+tfplan
+*.tfplan
+
+# Log files
+*.log
+
+# Ignore sensitive data files for security
+*.pem
+*.crt
+*.key
+
+# graphviz generated files
+*.svg

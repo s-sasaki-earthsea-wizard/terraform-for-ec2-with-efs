@@ -1,0 +1,21 @@
+# edit variables according to your environment
+/*
+# if you need, change this file's extension to .tfvars
+aws_access_key = "your_access_key" # AWS access key
+aws_secret_key = "your_secret_key" # AWS secret key
+
+key_name = "your_key_name"  # key pair name
+vpc_id = "your_vpc"   # VPC ID
+
+instance_type = "t2.micro" # instance type
+
+ami_id = "ami-0d0c6a887ce442603" # Ubuntu Server 20.04 LTS (HVM), EBS General Purpose (SSD) Volume Type
+# fetch ami_id by running `aws ec2 describe-images --region ap-northeast-1 --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*" "Name=virtualization-type,Values=hvm" --query 'Images[*].[CreationDate,ImageId]' --output text | sort -k1 -r | head -n1 | awk '{print $2}'`
+
+instance_count = 2 # the number of EC2 instances to create
+
+bastion_subnet_cidr_block = "10.0.0.0/24" # bastion subnet CIDR block
+public_subnet_cidr_block  = "10.0.2.0/24" # public subnet CIDR block
+vpc_cidr_block            = "10.0.0.0/16" # VPC CIDR block
+subnet_cidr_block         = "10.0.3.0/24" # subnet CIDR block
+*/
