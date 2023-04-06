@@ -82,6 +82,20 @@ resource "aws_vpc" "example" {
   }
 }
 
+resource "aws_vpc_dhcp_options" "example" {
+  domain_name_servers = ["AmazonProvidedDNS"]
+
+  tags = {
+    Name = "example-dhcp-options"
+  }
+}
+
+resource "aws_vpc_dhcp_options_association" "example" {
+  vpc_id          = aws_vpc.example.id
+  dhcp_options_id = aws_vpc_dhcp_options.example.id
+}
+
+
 resource "aws_subnet" "example" {
   count = var.instance_count
   cidr_block = "${cidrsubnet(var.vpc_cidr_block, 8, count.index)}"
@@ -159,6 +173,34 @@ resource "aws_nat_gateway" "this" {
   subnet_id     = aws_subnet.public.id
 }
 
+resource "aws_iam_role" "example" {
+  name = "example-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "example" {
+  name = "example-instance-profile"
+  role = aws_iam_role.example.name
+}
+
+resource "aws_iam_role_policy_attachment" "example" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonElasticFileSystemClientReadWriteAccess"
+  role       = aws_iam_role.example.name
+}
+
+
 resource "aws_instance" "bastion" {
   ami           = var.ami_id
   instance_type = var.instance_type
@@ -219,6 +261,8 @@ resource "aws_instance" "example" {
 
   subnet_id = aws_subnet.example[count.index].id
 
+  iam_instance_profile = aws_iam_instance_profile.example.name
+
   count = var.instance_count # the number of EC2 instances to create
 
   tags = {
@@ -228,7 +272,8 @@ resource "aws_instance" "example" {
   user_data = <<-EOF
                 #!/bin/bash
                 sudo apt-get update -y
-                sudo apt-get install -y nfs-common git binutils
+                sudo apt-get install -y nfs-common git binutils python3-pip
+                sudo pip3 install botocore
                 git clone https://github.com/aws/efs-utils
                 cd ./efs-utils
                 sudo ./build-deb.sh
