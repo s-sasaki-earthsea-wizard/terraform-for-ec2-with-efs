@@ -29,6 +29,13 @@ resource "aws_security_group" "ec2_sg" {
   name        = "ec2-sg"
   description = "Allow inbound SSH and NFS traffic"
   vpc_id      = aws_vpc.example.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 data "aws_subnets" "selected" {
@@ -221,7 +228,8 @@ resource "aws_instance" "example" {
   user_data = <<-EOF
                 #!/bin/bash
                 sudo apt-get update -y
-                sudo apt-get install -y nfs-common git amazon-efs-utils
+                sudo apt-get install -y nfs-common git binutils
+
                 sudo mkdir -p /mnt/efs
                 sudo mount -t efs -o tls,iam ${aws_efs_file_system.example.id}:/ /mnt/efs
                 echo '${aws_efs_file_system.example.id}:/ /mnt/efs efs tls,iam,_netdev 0 0' | sudo tee -a /etc/fstab
