@@ -229,7 +229,10 @@ resource "aws_instance" "example" {
                 #!/bin/bash
                 sudo apt-get update -y
                 sudo apt-get install -y nfs-common git binutils
-
+                git clone https://github.com/aws/efs-utils
+                cd ./efs-utils
+                sudo ./build-deb.sh
+                sudo apt-get install -y ./build/amazon-efs-utils*deb
                 sudo mkdir -p /mnt/efs
                 sudo mount -t efs -o tls,iam ${aws_efs_file_system.example.id}:/ /mnt/efs
                 echo '${aws_efs_file_system.example.id}:/ /mnt/efs efs tls,iam,_netdev 0 0' | sudo tee -a /etc/fstab

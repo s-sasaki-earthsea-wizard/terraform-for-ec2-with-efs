@@ -5,7 +5,8 @@ This repository contains Terraform codes to create AWS EC2 instances and mount E
 
 ## Development environment
 - OS: MacOS 13.2.1
-- Terraform v1.4.2
+- Terraform: v1.4.2
+- AWS CLI: 2.10.0
 
 ## Installation
 ### Terraform installation
