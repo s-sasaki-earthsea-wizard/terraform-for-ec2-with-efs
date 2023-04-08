@@ -104,8 +104,6 @@ You can see the public IP of bastion host runnning by:
 aws ec2 describe-instances --filters "Name=tag:Name,Values=bastion-host" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text
 ```
 
-
-
 #### Access right to pem file
 If you cannot connect bastion host, please run:
 ```
@@ -115,6 +113,16 @@ chmod 400 ${your_pem_key}
 Of course, tou can also use AWS console.
 
 ## Others
+### Trouble shooting
+Check cloud resource building log running by: 
+```
+cat /var/log/cloud-init-output.log
+```
+
+```
+cat /etc/resolv.conf
+```
+
 ### Usage of graphviz
 It is usefull to visualize resources by using `graphviz`.
 It can be installed running by:
