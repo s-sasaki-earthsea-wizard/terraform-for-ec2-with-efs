@@ -12,7 +12,7 @@ resource "aws_efs_file_system" "example" {
   creation_token = "example-efs"
 }
 
-resource "aws_efs_mount_target" "example" {
+resource "aws_efs_mount_target" "efs_mount_target" {
   for_each        = { for index, subnet in aws_subnet.example : index => subnet }
   file_system_id  = aws_efs_file_system.example.id
   subnet_id       = each.value.id
@@ -29,6 +29,13 @@ resource "aws_security_group" "ec2_sg" {
   name        = "ec2-sg"
   description = "Allow inbound SSH and NFS traffic"
   vpc_id      = aws_vpc.example.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 data "aws_subnets" "selected" {
@@ -74,6 +81,20 @@ resource "aws_vpc" "example" {
     Name = "example-vpc"
   }
 }
+
+resource "aws_vpc_dhcp_options" "example" {
+  domain_name_servers = ["AmazonProvidedDNS"]
+
+  tags = {
+    Name = "example-dhcp-options"
+  }
+}
+
+resource "aws_vpc_dhcp_options_association" "example" {
+  vpc_id          = aws_vpc.example.id
+  dhcp_options_id = aws_vpc_dhcp_options.example.id
+}
+
 
 resource "aws_subnet" "example" {
   count = var.instance_count
@@ -130,6 +151,17 @@ resource "aws_security_group_rule" "bastion_sg_ssh_ingress" {
   cidr_blocks = ["0.0.0.0/0"]
 }
 
+resource "aws_security_group_rule" "efs_access" {
+  count = var.instance_count
+  security_group_id = aws_security_group.ec2_sg.id
+
+  type        = "ingress"
+  from_port   = 2049
+  to_port     = 2049
+  protocol    = "tcp"
+  cidr_blocks = ["${aws_instance.example[count.index].private_ip}/32"]
+}
+
 resource "aws_eip" "bastion" {
   vpc = true
 }
@@ -151,6 +183,60 @@ resource "aws_nat_gateway" "this" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public.id
 }
+
+resource "aws_iam_role" "example" {
+  name = "example-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy" "example" {
+  name        = "example-policy"
+  description = "Custom IAM policy for example instances"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "ec2:DescribeAvailabilityZones",
+          "elasticfilesystem:ClientMount",
+          "elasticfilesystem:ClientWrite",
+          "elasticfilesystem:ClientRootAccess"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "example" {
+  name = "example-instance-profile"
+  role = aws_iam_role.example.name
+}
+
+resource "aws_iam_role_policy_attachment" "example" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonElasticFileSystemClientReadWriteAccess"
+  role       = aws_iam_role.example.name
+}
+
+resource "aws_iam_role_policy_attachment" "example_custom_policy" {
+  policy_arn = aws_iam_policy.example.arn
+  role       = aws_iam_role.example.name
+}
+
 
 resource "aws_instance" "bastion" {
   ami           = var.ami_id
@@ -212,18 +298,27 @@ resource "aws_instance" "example" {
 
   subnet_id = aws_subnet.example[count.index].id
 
+  iam_instance_profile = aws_iam_instance_profile.example.name
+
   count = var.instance_count # the number of EC2 instances to create
 
   tags = {
-    Name = "example-instance-${count.index}"
+    Name = "example-instance-${format("%02d", count.index)}"
   }
 
   user_data = <<-EOF
                 #!/bin/bash
                 sudo apt-get update -y
-                sudo apt-get install -y nfs-common git amazon-efs-utils
+                sudo apt-get install -y nfs-common git binutils python3-pip
+                sudo pip3 install botocore
+                echo "alias python=python3" | sudo tee -a /etc/bash.bashrc
+                echo "alias pip=pip3" | sudo tee -a /etc/bash.bashrc
                 sudo mkdir -p /mnt/efs
-                sudo mount -t efs -o tls,iam ${aws_efs_file_system.example.id}:/ /mnt/efs
+                git clone https://github.com/aws/efs-utils
+                cd ./efs-utils
+                sudo ./build-deb.sh
+                sudo apt-get install -y ./build/amazon-efs-utils*deb
+                sudo mount -t efs -o tls,iam ${aws_efs_file_system.example.id}:/ /mnt/efs 
                 echo '${aws_efs_file_system.example.id}:/ /mnt/efs efs tls,iam,_netdev 0 0' | sudo tee -a /etc/fstab
               EOF
 }
