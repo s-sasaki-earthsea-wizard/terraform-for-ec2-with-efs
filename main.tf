@@ -308,17 +308,29 @@ resource "aws_instance" "example" {
 
   user_data = <<-EOF
                 #!/bin/bash
+                # Update packages
                 sudo apt-get update -y
-                sudo apt-get install -y nfs-common git binutils python3-pip
+                sudo apt-get install -y nfs-common git binutils python3-pip curl unzip
                 sudo pip3 install botocore
+                
+                # Set alias
                 echo "alias python=python3" | sudo tee -a /etc/bash.bashrc
                 echo "alias pip=pip3" | sudo tee -a /etc/bash.bashrc
+                
+                # Mount EFS
                 sudo mkdir -p /mnt/efs
                 git clone https://github.com/aws/efs-utils
                 cd ./efs-utils
                 sudo ./build-deb.sh
+                
+                # Install EFS utils
                 sudo apt-get install -y ./build/amazon-efs-utils*deb
                 sudo mount -t efs -o tls,iam ${aws_efs_file_system.example.id}:/ /mnt/efs 
                 echo '${aws_efs_file_system.example.id}:/ /mnt/efs efs tls,iam,_netdev 0 0' | sudo tee -a /etc/fstab
+
+                # install aws cli
+                curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                unzip awscliv2.zip
+                sudo ./aws/install
               EOF
 }

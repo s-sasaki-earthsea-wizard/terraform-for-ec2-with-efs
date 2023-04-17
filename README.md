@@ -46,34 +46,13 @@ make init
 ### Check the Changes to Resources
 Review the planned changes by running:
 ```
-terraform plan -var-file=${your_tfvars_file.tfvars} -out apply.tfplan
-```
-then, tha plan is saved to `apply.tfplan` file.
-
-You should also create a `destroy.tfplan` file runnigng by:
-```
-terraform plan -destroy -out=destroy.tfplan 
-```
-which is needed to delete the resource.
-
-These two commands are summarizing by `Makefile` runnning by:
-```
 make plan
 ```
 Here, `*.tfvars` file is assumed to be default file name `terraform.tfvars`
 
-If an error occurs, you can check it by running:
-```
-terraform graph -draw-cycles
-```
 
 ### Apply the changes
 Apply the Terraform code to the resources by running:
-```
-terraform apply apply.tfplan
-```
-
-or 
 
 ```
 make apply
@@ -82,7 +61,7 @@ make apply
 ### Destruction (if needed)
 If you would like to clean up the resources, you can do so by running:
 ```
-terraform destroy
+make destroy
 ```
 
 ## Connection to Resources
